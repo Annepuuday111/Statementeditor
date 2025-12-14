@@ -1,0 +1,506 @@
+{% extends 'statements/base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+  body {
+    overflow: hidden;
+    background: radial-gradient(circle at top, #e0f2ff 0, #f9fafb 50%, #eef2ff 100%);
+  }
+
+  .dashboard-container {
+    padding: 2rem 1rem;
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+  }
+
+  .dashboard-shell {
+    width: 100%;
+    max-width: 1120px;
+  }
+
+  .card {
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.96);
+  }
+
+  .card-soft {
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  .card-title {
+    font-weight: 700;
+    font-size: 1.25rem;
+    margin-bottom: 0.35rem;
+    letter-spacing: 0.01em;
+  }
+
+  .step-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: #6b7280;
+  }
+
+  .text-muted-small {
+    font-size: 0.82rem;
+    color: #6b7280;
+  }
+
+  .d-none {
+    display: none !important;
+  }
+
+  .bank-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .bank-card {
+    cursor: pointer;
+    border-radius: 14px;
+    padding: 0.9rem 0.85rem;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid transparent;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-position 0.3s ease;
+    background-size: 160% 160%;
+    background-position: 0 0;
+  }
+
+  .bank-icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.1);
+    backdrop-filter: blur(6px);
+    flex-shrink: 0;
+  }
+
+  .bank-icon-circle img {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+  }
+
+  .bank-name {
+    font-weight: 700;
+    font-size: 0.98rem;
+  }
+
+  .bank-subtitle {
+    font-size: 0.78rem;
+    opacity: 0.95;
+  }
+
+  .bank-card-sbi {
+    background-image: linear-gradient(135deg, #0047ab, #00b4ff);
+  }
+
+  .bank-card-hdfc {
+    background-image: linear-gradient(135deg, #b3001b, #ff4b5c);
+  }
+
+  .bank-card-icici {
+    background-image: linear-gradient(135deg, #f46b45, #eea849);
+  }
+
+  .bank-card-axis {
+    background-image: linear-gradient(135deg, #6d28d9, #d946ef);
+  }
+
+  .bank-card:hover {
+    transform: translateY(-2px) translateZ(0);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.35);
+    border-color: rgba(255, 255, 255, 0.7);
+    background-position: 20% 20%;
+  }
+
+  .bank-card.selected {
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.45);
+    border-color: rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px);
+  }
+
+  .bank-pill {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.7rem;
+    font-size: 0.65rem;
+    background: rgba(15, 23, 42, 0.25);
+    border-radius: 999px;
+    padding: 0.1rem 0.45rem;
+    font-weight: 600;
+  }
+
+  .model-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .model-card {
+    cursor: pointer;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    padding: 0.8rem 0.85rem;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+    background: linear-gradient(135deg, #f9fafb, #eef2ff);
+  }
+
+  .model-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
+    border-color: #2563eb;
+  }
+
+  .model-card.selected {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.45);
+    background: linear-gradient(135deg, #e0ecff, #eef2ff);
+  }
+
+  .model-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+  }
+
+  .model-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .model-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #2563eb;
+  }
+
+  .upload-card-inner {
+    padding: 1.3rem 1.2rem 1.1rem;
+  }
+
+  .upload-hint {
+    font-size: 0.82rem;
+    color: #4b5563;
+  }
+
+  .selected-model-label {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .btn-primary {
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  .file-input-wrapper {
+    border-radius: 12px;
+    border: 1px dashed rgba(148, 163, 184, 0.9);
+    padding: 0.8rem 0.9rem;
+    background: #f9fafb;
+  }
+
+  .file-input-wrapper label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+    color: #111827;
+  }
+
+  .file-input-wrapper input[type="file"] {
+    font-size: 0.82rem;
+  }
+
+  @media (max-width: 991.98px) {
+    .dashboard-container {
+      padding: 1.5rem 0.75rem;
+    }
+    .dashboard-shell {
+      max-width: 100%;
+    }
+    .bank-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .model-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 575.98px) {
+    .dashboard-container {
+      padding: 1.2rem 0.6rem;
+    }
+    .bank-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem;
+    }
+    .model-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .bank-card {
+      padding: 0.8rem 0.7rem;
+    }
+    .bank-icon-circle {
+      width: 36px;
+      height: 36px;
+    }
+    .card {
+      border-radius: 14px;
+    }
+  }
+</style>
+
+<script>
+let selectedBank = null;
+let selectedLayout = null;
+
+function resetModelsAndUpload() {
+  document.querySelectorAll('.bank-models-group').forEach(el => el.classList.add('d-none'));
+  document.querySelectorAll('.model-card').forEach(el => el.classList.remove('selected'));
+  const uploadCard = document.getElementById('uploadCard');
+  if (uploadCard) uploadCard.classList.add('d-none');
+  const label = document.getElementById('selectedModelLabel');
+  const bankInput = document.getElementById('bankInput');
+  const layoutInput = document.getElementById('layoutInput');
+  const uploadBtn = document.getElementById('uploadSubmitBtn');
+  if (label) label.textContent = 'No model selected';
+  if (bankInput) bankInput.value = '';
+  if (layoutInput) layoutInput.value = '';
+  if (uploadBtn) uploadBtn.disabled = true;
+}
+
+function selectBank(bank) {
+  selectedBank = bank;
+  selectedLayout = null;
+  document.querySelectorAll('.bank-card').forEach(el => el.classList.remove('selected'));
+  const bankCard = document.getElementById('bank-card-' + bank);
+  if (bankCard) bankCard.classList.add('selected');
+  resetModelsAndUpload();
+  const modelsGroup = document.getElementById('models-' + bank);
+  if (modelsGroup) modelsGroup.classList.remove('d-none');
+}
+
+function selectModel(bank, layout, label) {
+  selectedBank = bank;
+  selectedLayout = layout;
+  document.querySelectorAll('.model-card').forEach(el => el.classList.remove('selected'));
+  const modelCard = document.getElementById('model-card-' + layout);
+  if (modelCard) modelCard.classList.add('selected');
+  const bankInput = document.getElementById('bankInput');
+  const layoutInput = document.getElementById('layoutInput');
+  const labelSpan = document.getElementById('selectedModelLabel');
+  const uploadCard = document.getElementById('uploadCard');
+  const uploadBtn = document.getElementById('uploadSubmitBtn');
+  if (bankInput) bankInput.value = bank;
+  if (layoutInput) layoutInput.value = layout;
+  if (labelSpan) labelSpan.textContent = label + ' (' + bank + ')';
+  if (uploadCard) uploadCard.classList.remove('d-none');
+  if (uploadBtn) uploadBtn.disabled = false;
+}
+
+document.addEventListener('DOMContentLoaded', function() {});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-shell">
+    <div class="card mb-4">
+      <div class="card-body" style="padding: 1.4rem 1.3rem 1.2rem;">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+          <div>
+            <div class="step-label">Step 1</div>
+            <h5 class="card-title mb-1">Choose your bank</h5>
+            <p class="text-muted-small mb-0">Then select the exact statement format and upload the PDF.</p>
+          </div>
+        </div>
+
+        <div class="bank-grid">
+          <div>
+            <div id="bank-card-SBI"
+                 class="bank-card bank-card-sbi"
+                 onclick="selectBank('SBI')">
+              <div class="bank-pill">Supported</div>
+              <div class="bank-icon-circle">
+                <img src="https://1000logos.net/wp-content/uploads/2018/03/SBI-Logo.png" alt="SBI">
+              </div>
+              <div>
+                <div class="bank-name">SBI</div>
+                <div class="bank-subtitle">Multiple statement layouts</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div id="bank-card-HDFC"
+                 class="bank-card bank-card-hdfc"
+                 onclick="selectBank('HDFC')">
+              <div class="bank-pill">Coming soon</div>
+              <div class="bank-icon-circle">
+                <img src="https://crystalpng.com/wp-content/uploads/2025/09/hdfc-bank-logo.png" alt="HDFC">
+              </div>
+              <div>
+                <div class="bank-name">HDFC Bank</div>
+                <div class="bank-subtitle">Planned support</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div id="bank-card-ICICI"
+                 class="bank-card bank-card-icici"
+                 onclick="selectBank('ICICI')">
+              <div class="bank-pill">Coming soon</div>
+              <div class="bank-icon-circle">
+                <img src="https://cdn.freebiesupply.com/logos/large/2x/icici-1-logo-svg-vector.svg" alt="ICICI">
+              </div>
+              <div>
+                <div class="bank-name">ICICI Bank</div>
+                <div class="bank-subtitle">Planned support</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div id="bank-card-AXIS"
+                 class="bank-card bank-card-axis"
+                 onclick="selectBank('AXIS')">
+              <div class="bank-pill">Coming soon</div>
+              <div class="bank-icon-circle">
+                <img src="https://www.jobsgyan.in/wp-content/uploads/2021/05/Axis-Bank-PNG-Logo-.png" alt="Axis">
+              </div>
+              <div>
+                <div class="bank-name">Axis Bank</div>
+                <div class="bank-subtitle">Planned support</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="models-SBI" class="card card-soft mb-3 bank-models-group d-none">
+      <div class="card-body" style="padding: 1.2rem 1.2rem 1.05rem;">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+          <div>
+            <div class="step-label">Step 2</div>
+            <h5 class="card-title mb-1">Choose SBI statement format</h5>
+            <p class="text-muted-small mb-0">Match the columns of your PDF with one of the formats below.</p>
+          </div>
+          <div class="mt-3 mt-md-0 text-muted-small">
+            Bank selected: <span class="fw-semibold">SBI</span>
+          </div>
+        </div>
+
+        <div class="model-grid">
+          <div>
+            <div id="model-card-SBI_POST_VALUE"
+                 class="model-card"
+                 onclick="selectModel('SBI', 'SBI_POST_VALUE', 'SBI – Post Date / Value Date')">
+              <div class="model-header">
+                <span class="model-title">Post Date / Value Date</span>
+                <span class="model-badge">Model 1</span>
+              </div>
+              <div class="text-muted-small">
+                Columns: Post Date, Value Date, Description, Cheque No/Reference, Debit, Credit, Balance
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div id="model-card-SBI_TXN_VALUE"
+                 class="model-card"
+                 onclick="selectModel('SBI', 'SBI_TXN_VALUE', 'SBI – Txn Date / Value Date')">
+              <div class="model-header">
+                <span class="model-title">Txn Date / Value Date</span>
+                <span class="model-badge">Model 2</span>
+              </div>
+              <div class="text-muted-small">
+                Columns: Txn Date, Value Date, Description, Ref No./Cheque No., Debit, Credit, Balance
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div id="model-card-SBI_DATE_DETAILS"
+                 class="model-card"
+                 onclick="selectModel('SBI', 'SBI_DATE_DETAILS', 'SBI – Date / Details')">
+              <div class="model-header">
+                <span class="model-title">Date / Details / Ref No.</span>
+                <span class="model-badge">Model 3</span>
+              </div>
+              <div class="text-muted-small">
+                Columns: Date, Details, Ref No./Cheque No., Debit, Credit, Balance
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="uploadCard" class="card card-soft mb-4 d-none">
+      <div class="card-body upload-card-inner">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+          <div>
+            <div class="step-label">Step 3</div>
+            <h5 class="card-title mb-1">Upload statement PDF</h5>
+            <p class="upload-hint mb-0">
+              Selected model:
+              <span id="selectedModelLabel" class="selected-model-label">No model selected</span>
+            </p>
+          </div>
+        </div>
+
+        <form method="post" action="{% url 'statements:upload' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          {{ upload_form.non_field_errors }}
+
+          <input type="hidden" name="bank" id="bankInput">
+          <input type="hidden" name="layout" id="layoutInput">
+
+          <div class="file-input-wrapper mb-3">
+            {{ upload_form.original_file.label_tag }}
+            {{ upload_form.original_file }}
+            {{ upload_form.original_file.errors }}
+            <div class="text-muted-small mt-1">
+              Supported: SBI PDF statements. Make sure the format matches the selected model.
+            </div>
+          </div>
+
+          <button type="submit"
+                  id="uploadSubmitBtn"
+                  class="btn btn-primary w-100">
+            Upload and continue
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+</div>
+{% endblock %}

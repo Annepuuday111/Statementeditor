@@ -1,0 +1,204 @@
+{% extends 'statements/base.html' %}
+{% block title %}Edit Statement {{ statement.id }}{% endblock %}
+
+{% block extra_head %}
+<script>
+let statementData = JSON.parse('{{ data_json|escapejs }}');
+
+function recalcBalances() {
+  const meta = statementData.meta || {};
+  let opening = parseFloat(meta.opening_balance || 0);
+  let runningBalance = isNaN(opening) ? 0 : opening;
+
+  statementData.transactions.forEach((txn, idx) => {
+    const debit = parseFloat(txn.debit || 0) || 0;
+    const credit = parseFloat(txn.credit || 0) || 0;
+    runningBalance = runningBalance - debit + credit;
+    txn.balance = runningBalance;
+
+    const balInput = document.querySelector(`#row-${idx} .balance-cell`);
+    if (balInput) {
+      balInput.value = runningBalance.toFixed(2);
+    }
+  });
+}
+
+function onAmountChange(idx, field, inputElem) {
+  const val = parseFloat(inputElem.value || 0);
+  statementData.transactions[idx][field] = isNaN(val) ? 0 : val;
+  recalcBalances();
+}
+
+function onMetaChange(field, inputElem) {
+  if (!statementData.meta) statementData.meta = {};
+  statementData.meta[field] = inputElem.value;
+}
+
+function onSubmitForm() {
+  statementData.transactions.forEach((txn, idx) => {
+    ['date','value_date','description','cheque_ref','debit','credit','balance'].forEach(field => {
+      const input = document.querySelector(`#row-${idx} .${field}-cell`);
+      if (!input) return;
+      if (['debit','credit','balance'].includes(field)) {
+        const val = parseFloat(input.value || 0);
+        txn[field] = isNaN(val) ? 0 : val;
+      } else {
+        txn[field] = input.value;
+      }
+    });
+  });
+
+  document.getElementById('data_json').value = JSON.stringify(statementData);
+  return true;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  recalcBalances();
+});
+</script>
+{% endblock %}
+
+{% block content %}
+{% with layout=data.meta.layout|default:'SBI_POST_VALUE' %}
+<h4 class="mb-2">Edit Statement #{{ statement.id }}</h4>
+<p class="text-muted mb-3">
+  Bank: {{ data.meta.bank|default:"SBI" }},
+  Layout:
+  {% if layout == "SBI_TXN_VALUE" %}
+    <span class="badge text-bg-primary">SBI – Txn Date / Value Date</span>
+  {% else %}
+    <span class="badge text-bg-secondary">SBI – Post Date / Value Date</span>
+  {% endif %}
+</p>
+
+<form method="post" action="{% url 'statements:save' statement.id %}" onsubmit="return onSubmitForm();">
+  {% csrf_token %}
+  <input type="hidden" name="data_json" id="data_json">
+
+  <div class="card mb-3 shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title">Account Details</h5>
+      <div class="row g-2">
+        <div class="col-md-3">
+          <label class="form-label">Account Name</label>
+          <input type="text" class="form-control"
+                 value="{{ data.meta.account_name }}"
+                 oninput="onMetaChange('account_name', this)">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Account Number</label>
+          <input type="text" class="form-control"
+                 value="{{ data.meta.account_number }}"
+                 oninput="onMetaChange('account_number', this)">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Period</label>
+          <input type="text" class="form-control"
+                 value="{{ data.meta.period }}"
+                 oninput="onMetaChange('period', this)">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Opening Balance</label>
+          <input type="number" step="0.01" class="form-control"
+                 value="{{ data.meta.opening_balance }}"
+                 oninput="onMetaChange('opening_balance', this); recalcBalances();">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title">Transactions</h5>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              {% if layout == "SBI_TXN_VALUE" %}
+                <th>Txn Date</th>
+                <th>Value Date</th>
+                <th>Description</th>
+                <th>Ref No./Cheque No.</th>
+                <th>Debit</th>
+                <th>Credit</th>
+                <th>Balance</th>
+              {% else %}
+                <th>Post Date</th>
+                <th>Value Date</th>
+                <th>Description</th>
+                <th>Cheque / Ref</th>
+                <th>Debit</th>
+                <th>Credit</th>
+                <th>Balance</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+          {% for txn in data.transactions %}
+            <tr id="row-{{ forloop.counter0 }}">
+              <td>
+                <input type="text" class="form-control form-control-sm date-cell"
+                       value="{{ txn.date }}">
+              </td>
+              <td>
+                <input type="text" class="form-control form-control-sm value_date-cell"
+                       value="{{ txn.value_date }}">
+              </td>
+              <td>
+                <input type="text" class="form-control form-control-sm description-cell"
+                       value="{{ txn.description }}">
+              </td>
+              <td>
+                <input type="text" class="form-control form-control-sm cheque_ref-cell"
+                       value="{{ txn.cheque_ref }}">
+              </td>
+              <td>
+                <input type="number" step="0.01"
+                       class="form-control form-control-sm debit-cell"
+                       value="{{ txn.debit }}"
+                       oninput="onAmountChange({{ forloop.counter0 }}, 'debit', this)">
+              </td>
+              <td>
+                <input type="number" step="0.01"
+                       class="form-control form-control-sm credit-cell"
+                       value="{{ txn.credit }}"
+                       oninput="onAmountChange({{ forloop.counter0 }}, 'credit', this)">
+              </td>
+              <td>
+                <input type="number" step="0.01"
+                       class="form-control form-control-sm balance-cell"
+                       value="{{ txn.balance }}" readonly>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center">
+                No transactions parsed from this PDF for
+                {% if layout == "SBI_TXN_VALUE" %}
+                  Txn Date / Value Date format.
+                {% else %}
+                  Post Date / Value Date format.
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-flex justify-content-between mt-3">
+        <a href="{% url 'statements:dashboard' %}" class="btn btn-outline-secondary">Back</a>
+        <div>
+          <button type="submit" name="action" value="save" class="btn btn-outline-primary me-2">
+            Save
+          </button>
+          <button type="submit" name="action" value="download" class="btn btn-primary">
+            Save &amp; Download Updated PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endwith %}
+{% endblock %}
